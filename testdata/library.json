@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "global": {
+    "quality_positive": "dummyquality, testtag1",
+    "base_negative": "dummy_negative_base",
+    "composition": "{quality}, {cat:subjectcat}, {cat:scenecat}, {subject}, {cat:stylecat}"
+  },
+  "categories": [
+    {
+      "id": "subjectcat",
+      "label": "Dummy Join Category",
+      "default_mode": "join",
+      "entries": [
+        { "id": "j01", "label": "Join Entry A", "positive": "dummyjoinA", "negative": "dummynegjoinA" }
+      ]
+    },
+    {
+      "id": "scenecat",
+      "label": "Dummy Pick Category",
+      "default_mode": "pick",
+      "entries": [
+        { "id": "p01", "label": "Pick Entry 1", "positive": "dummypick1", "negative": "" },
+        { "id": "p02", "label": "Pick Entry 2", "positive": "dummypick2", "negative": "" },
+        { "id": "p03", "label": "Pick Entry 3", "positive": "dummypick3", "negative": "" }
+      ]
+    },
+    {
+      "id": "stylecat",
+      "label": "Dummy Axis Category",
+      "default_mode": "axis",
+      "entries": [
+        { "id": "a01", "label": "Axis 1", "positive": "dummystyle1", "negative": "dummynegstyle1" },
+        { "id": "a02", "label": "Axis 2", "positive": "dummystyle2", "negative": "dummynegstyle2" },
+        { "id": "a03", "label": "Axis 3", "positive": "dummystyle3", "negative": "dummynegstyle3" },
+        { "id": "a04", "label": "Axis 4", "positive": "dummystyle4", "negative": "dummynegstyle4" },
+        { "id": "a05", "label": "Axis 5", "positive": "dummystyle5", "negative": "dummynegstyle5" }
+      ]
+    }
+  ]
+}
