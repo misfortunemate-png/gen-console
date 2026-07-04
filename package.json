@@ -1,0 +1,17 @@
+{
+  "name": "gen-console",
+  "version": "0.1.0",
+  "description": "Local ComfyUI-driven continuous image generation console",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "build": "cd ui && npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

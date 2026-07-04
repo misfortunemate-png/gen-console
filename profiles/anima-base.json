@@ -1,0 +1,18 @@
+{
+  "id": "anima-base",
+  "label": "Anima base v1.0",
+  "workflow": "anima-base.json",
+  "checkpoint": "anima-base-v1.0.safetensors",
+  "clip": "qwen_3_06b_base.safetensors",
+  "vae": "qwen_image_vae.safetensors",
+  "outputNodeId": "10",
+  "defaults": {
+    "width": 896,
+    "height": 1152,
+    "steps": 25,
+    "cfg": 4.5,
+    "sampler": "er_sde",
+    "scheduler": "simple"
+  },
+  "turbo": false
+}
