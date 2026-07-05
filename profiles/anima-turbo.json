@@ -1,20 +1,24 @@
 {
   "id": "anima-turbo",
-  "label": "Anima Turbo LoRA (未導入)",
-  "workflow": "anima-base.json",
+  "label": "Anima Turbo LoRA v0.2",
+  "workflow": "anima-lora.json",
   "checkpoint": "anima-base-v1.0.safetensors",
   "clip": "qwen_3_06b_base.safetensors",
   "vae": "qwen_image_vae.safetensors",
+  "lora": "anima-turbo-lora-v0.2.safetensors",
+  "loraStrengthModel": 1.0,
+  "loraStrengthClip": 1.0,
   "outputNodeId": "10",
   "defaults": {
     "width": 896,
     "height": 1152,
-    "steps": 8,
+    "steps": 10,
     "cfg": 1,
     "sampler": "er_sde",
     "scheduler": "simple"
   },
   "turbo": true,
-  "installed": false,
-  "installNote": "Anima Turbo LoRAはCivitaiログインが必要なため未取得。LoRAファイル配置後、このプロファイルにlora設定を追加して有効化する。"
+  "installed": true,
+  "source": "https://civitai.com/models/2560840?modelVersionId=2979642",
+  "installNote": "蒸留LoRA（CFG=1・8〜12steps用）。データ定義書§1により受入テストでの使用は禁止。探索的な大量生成ラン専用"
 }

@@ -1,0 +1,25 @@
+{
+  "id": "niji-sweet-spot",
+  "label": "Anima base + Niji Sweet Spot v4",
+  "workflow": "anima-lora.json",
+  "checkpoint": "anima-base-v1.0.safetensors",
+  "clip": "qwen_3_06b_base.safetensors",
+  "vae": "qwen_image_vae.safetensors",
+  "lora": "ANIMA_Niji_Sweet_Spot_v4.safetensors",
+  "loraStrengthModel": 1.0,
+  "loraStrengthClip": 1.0,
+  "loraTriggerWord": "@NJSW33T",
+  "outputNodeId": "10",
+  "defaults": {
+    "width": 896,
+    "height": 1152,
+    "steps": 25,
+    "cfg": 4.5,
+    "sampler": "er_sde",
+    "scheduler": "simple"
+  },
+  "turbo": false,
+  "installed": true,
+  "source": "https://civitai.com/models/2554999?modelVersionId=3040615",
+  "usageNote": "スタイル強化LoRA。ポジティブプロンプトにトリガーワード @NJSW33T を含めると効果が発揮される（Anima base併用）"
+}

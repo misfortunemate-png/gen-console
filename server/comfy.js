@@ -22,6 +22,9 @@ const SLOT_TYPES = {
   __CFG__: 'number',
   __SAMPLER__: 'string',
   __SCHEDULER__: 'string',
+  __LORA_NAME__: 'string',
+  __LORA_STRENGTH_MODEL__: 'number',
+  __LORA_STRENGTH_CLIP__: 'number',
 };
 
 function fillTemplate(templateObj, slotValues) {

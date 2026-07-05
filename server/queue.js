@@ -188,6 +188,12 @@ async function executeRun(runState) {
         __SCHEDULER__: runDef.params.scheduler,
       };
 
+      if (profile.lora) {
+        slotValues.__LORA_NAME__ = profile.lora;
+        slotValues.__LORA_STRENGTH_MODEL__ = profile.loraStrengthModel ?? 1.0;
+        slotValues.__LORA_STRENGTH_CLIP__ = profile.loraStrengthClip ?? 1.0;
+      }
+
       // Test-only deterministic failure injection (spec §5 "失敗継続" test).
       // Never exposed via the production UI — a testdata-driven test script
       // sets this field directly on the run-definition body.
