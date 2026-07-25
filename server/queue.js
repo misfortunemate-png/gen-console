@@ -117,57 +117,30 @@ function appendOutputsIndex(outputsDir, entry) {
   fs.appendFileSync(indexPath, JSON.stringify(entry) + '\n');
 }
 
-// Writes the final PNG+JSON into content/output (the orderer's space — full
-// prompt text belongs here per spec §9, unlike logs/pipeline.log). Only
-// deletes ComfyUI's own scratch copy after confirming the destination write's
-// byte size matches (PM decision: never delete before verifying the copy).
-// Also copies to content/outputs/ (§1 one-stop destination) and appends index.jsonl.
-function writeOutputFiles({ outputRoot, task, seed, buffer, positiveText, negativeText, expansionLog, profile, runDef, loras, comfyFilename, comfySubfolder }) {
-  const axisDir = path.join(outputRoot, task.axisId);
-  fs.mkdirSync(axisDir, { recursive: true });
-  const baseName = `${String(task.seq).padStart(3, '0')}_${seed}`;
-  const pngPath = path.join(axisDir, `${baseName}.png`);
-  const jsonPath = path.join(axisDir, `${baseName}.json`);
+// Saves the PNG to content/output/temp/ and appends gallery metadata to
+// temp/index.jsonl. Deletes ComfyUI's scratch copy after confirming byte count.
+function writeOutputFiles({ task, seed, buffer, profile, runDef, loras, comfyFilename, comfySubfolder }) {
+  const tempDir = path.join(CONTENT_ROOT, 'output', 'temp');
+  fs.mkdirSync(tempDir, { recursive: true });
 
-  fs.writeFileSync(pngPath, buffer);
-
-  const writtenSize = fs.statSync(pngPath).size;
-  if (writtenSize === buffer.length && comfyFilename) {
-    const comfyOutputPath = path.join(COMFYUI_OUTPUT_DIR, comfySubfolder || '', comfyFilename);
-    try {
-      const comfySize = fs.statSync(comfyOutputPath).size;
-      if (comfySize === buffer.length) {
-        fs.unlinkSync(comfyOutputPath);
-      }
-    } catch {
-      // best-effort cleanup only; never fail the task over this
-    }
-  }
-
-  const metadata = {
-    seed,
-    profile: profile.id,
-    params: runDef.params,
-    positiveText,
-    negativeText,
-    expansionLog,
-    workflow: profile.workflow,
-    axisId: task.axisId,
-    seq: task.seq,
-  };
-  fs.writeFileSync(jsonPath, JSON.stringify(metadata, null, 2));
-
-  // §1: also save to content/outputs/ (one-stop destination)
-  const outputsDir = path.join(CONTENT_ROOT, 'outputs');
-  fs.mkdirSync(outputsDir, { recursive: true });
   const now = new Date();
   const p2 = (n) => String(n).padStart(2, '0');
   const ts = `${now.getFullYear()}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${p2(now.getHours())}${p2(now.getMinutes())}${p2(now.getSeconds())}`;
   const modelTag = makeModelTag(profile.checkpoint);
-  const outputsFile = `${ts}_${modelTag}_${seed}.png`;
-  fs.writeFileSync(path.join(outputsDir, outputsFile), buffer);
-  appendOutputsIndex(outputsDir, {
-    file: outputsFile,
+  const fileName = `${ts}_${modelTag}_${seed}.png`;
+  const filePath = path.join(tempDir, fileName);
+
+  fs.writeFileSync(filePath, buffer);
+
+  if (comfyFilename) {
+    try {
+      const comfyPath = path.join(COMFYUI_OUTPUT_DIR, comfySubfolder || '', comfyFilename);
+      if (fs.statSync(comfyPath).size === buffer.length) fs.unlinkSync(comfyPath);
+    } catch { /* best-effort cleanup only */ }
+  }
+
+  appendOutputsIndex(tempDir, {
+    file: fileName,
     ts: now.toISOString(),
     model: modelTag,
     loras: loras || [],
@@ -259,13 +232,9 @@ async function executeRun(runState) {
 
       const { buffer, filename, subfolder } = await comfy.fetchOutputImage(promptId, profile.outputNodeId);
       writeOutputFiles({
-        outputRoot,
         task,
         seed,
         buffer,
-        positiveText,
-        negativeText,
-        expansionLog,
         profile,
         runDef,
         loras: effectiveLoras,

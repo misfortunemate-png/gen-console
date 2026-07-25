@@ -9,9 +9,19 @@ const queue = require('./queue');
 const PORT = process.env.PORT || 3000;
 const APP_ROOT = path.join(__dirname, '..');
 const CONTENT_ROOT = path.join(APP_ROOT, '..', 'content');
-const OUTPUTS_DIR = path.join(CONTENT_ROOT, 'outputs');
+const OUTPUT_ROOT = path.join(CONTENT_ROOT, 'output');
+const OUTPUTS_DIR = path.join(OUTPUT_ROOT, 'temp');
 
 fs.mkdirSync(OUTPUTS_DIR, { recursive: true });
+fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
+
+// Clear temp on startup (files only; subdirectories like run manifests are left intact)
+for (const f of fs.readdirSync(OUTPUTS_DIR)) {
+  try {
+    const p = path.join(OUTPUTS_DIR, f);
+    if (fs.statSync(p).isFile()) fs.unlinkSync(p);
+  } catch { /* best-effort */ }
+}
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
@@ -51,6 +61,21 @@ app.get('/api/outputs/:file', (req, res) => {
   }
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not_found' });
   res.sendFile(filePath);
+});
+
+app.post('/api/outputs/save/:file', (req, res) => {
+  const { file } = req.params;
+  if (!/^[A-Za-z0-9._-]+\.png$/.test(file)) {
+    return res.status(400).json({ error: 'invalid_filename' });
+  }
+  const src = path.resolve(OUTPUTS_DIR, file);
+  if (!src.startsWith(OUTPUTS_DIR + path.sep)) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  if (!fs.existsSync(src)) return res.status(404).json({ error: 'not_found' });
+  const dst = path.join(OUTPUT_ROOT, file);
+  fs.copyFileSync(src, dst);
+  res.json({ ok: true });
 });
 
 app.get('/api/loras', async (req, res) => {

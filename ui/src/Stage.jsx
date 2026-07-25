@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { api } from './api';
 
 function pad3(n) {
   return String(n).padStart(3, '0');
@@ -45,18 +46,39 @@ function RunStrip({ status }) {
   );
 }
 
-function Lightbox({ src, meta, onClose }) {
+function Lightbox({ outputs, idx, onClose, onNavigate }) {
+  const item = outputs[idx];
+  const src = `/api/outputs/${encodeURIComponent(item.file)}`;
+  const meta = item;
+
   const [scale, setScale] = useState(1);
   const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [saved, setSaved] = useState(false);
   const dragRef = useRef(null);
   const stageRef = useRef(null);
   const touchesRef = useRef([]);
 
+  const canPrev = idx > 0;
+  const canNext = idx < outputs.length - 1;
+
+  // Reset zoom and save state when navigating to a different image
   useEffect(() => {
-    const h = (e) => { if (e.key === 'Escape') onClose(); };
+    setScale(1);
+    setPos({ x: 0, y: 0 });
+    setSaved(false);
+  }, [idx]);
+
+  const handleClose = useCallback(() => onClose(), [onClose]);
+
+  useEffect(() => {
+    const h = (e) => {
+      if (e.key === 'Escape') handleClose();
+      if (e.key === 'ArrowLeft' && canPrev) onNavigate(idx - 1);
+      if (e.key === 'ArrowRight' && canNext) onNavigate(idx + 1);
+    };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [onClose]);
+  }, [handleClose, onNavigate, idx, canPrev, canNext]);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -120,13 +142,35 @@ function Lightbox({ src, meta, onClose }) {
     if (e.touches.length === 0) dragRef.current = null;
   }
 
+  async function handleSave(e) {
+    e.stopPropagation();
+    try {
+      await api.saveOutput(item.file);
+      setSaved(true);
+    } catch { /* ignore */ }
+  }
+
   const loraStr = meta?.loras?.length
     ? meta.loras.map((l) => `${l.name.replace(/\.[^.]+$/, '')}(${Number(l.strength).toFixed(2)})`).join(', ')
     : null;
 
   return (
-    <div className="lb-backdrop" onClick={onClose}>
-      <button className="lb-close" onClick={(e) => { e.stopPropagation(); onClose(); }}>✕</button>
+    <div className="lb-backdrop" onClick={handleClose}>
+      <button className="lb-close" onClick={(e) => { e.stopPropagation(); handleClose(); }}>✕</button>
+
+      <button
+        className="lb-nav lb-prev"
+        onClick={(e) => { e.stopPropagation(); onNavigate(idx - 1); }}
+        disabled={!canPrev}
+        aria-label="前の画像"
+      >‹</button>
+      <button
+        className="lb-nav lb-next"
+        onClick={(e) => { e.stopPropagation(); onNavigate(idx + 1); }}
+        disabled={!canNext}
+        aria-label="次の画像"
+      >›</button>
+
       <div
         ref={stageRef}
         className="lb-stage"
@@ -156,20 +200,26 @@ function Lightbox({ src, meta, onClose }) {
           }}
         />
       </div>
-      {meta && (
-        <div className="lb-meta">
-          <span>{meta.model}</span>
-          {loraStr && <span>LoRA: {loraStr}</span>}
-          <span>seed {meta.seed}</span>
-          <span>{meta.steps}steps · CFG{meta.cfg} · {meta.sampler}</span>
-        </div>
-      )}
+
+      <div className="lb-meta">
+        <span>{meta.model}</span>
+        {loraStr && <span>LoRA: {loraStr}</span>}
+        <span>seed {meta.seed}</span>
+        <span>{meta.steps}steps · CFG{meta.cfg} · {meta.sampler}</span>
+        <button
+          className={`lb-save${saved ? ' saved' : ''}`}
+          onClick={handleSave}
+          disabled={saved}
+        >
+          {saved ? '保存済み ✓' : '保存'}
+        </button>
+      </div>
     </div>
   );
 }
 
 export default function Stage({ runStatus, outputs }) {
-  const [lightbox, setLightbox] = useState(null); // { src, meta }
+  const [lightboxIdx, setLightboxIdx] = useState(null);
 
   return (
     <main className="stage">
@@ -184,11 +234,11 @@ export default function Stage({ runStatus, outputs }) {
         {outputs.length === 0 && (
           <div className="hint">生成を開始するとここに結果が表示されます</div>
         )}
-        {outputs.map((item) => (
+        {outputs.map((item, i) => (
           <figure
             key={item.file}
             className="tile"
-            onClick={() => setLightbox({ src: `/api/outputs/${encodeURIComponent(item.file)}`, meta: item })}
+            onClick={() => setLightboxIdx(i)}
           >
             <img
               src={`/api/outputs/${encodeURIComponent(item.file)}`}
@@ -210,11 +260,12 @@ export default function Stage({ runStatus, outputs }) {
         ))}
       </div>
 
-      {lightbox && (
+      {lightboxIdx !== null && outputs[lightboxIdx] && (
         <Lightbox
-          src={lightbox.src}
-          meta={lightbox.meta}
-          onClose={() => setLightbox(null)}
+          outputs={outputs}
+          idx={lightboxIdx}
+          onClose={() => setLightboxIdx(null)}
+          onNavigate={setLightboxIdx}
         />
       )}
     </main>

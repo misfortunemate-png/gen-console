@@ -630,6 +630,25 @@ input:focus {
   cursor: pointer;
   z-index: 501;
 }
+.lb-nav {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 18px 11px;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 502;
+  user-select: none;
+}
+.lb-nav:disabled { opacity: 0.2; cursor: default; }
+.lb-nav:not(:disabled):hover { background: rgba(0, 0, 0, 0.85); }
+.lb-prev { left: 16px; }
+.lb-next { right: 16px; }
 .lb-meta {
   position: fixed;
   bottom: 0;
@@ -637,6 +656,7 @@ input:focus {
   right: 0;
   background: rgba(0, 0, 0, 0.7);
   display: flex;
+  align-items: center;
   gap: 14px;
   padding: 8px 20px;
   font-size: 11.5px;
@@ -644,3 +664,21 @@ input:focus {
   z-index: 501;
   flex-wrap: wrap;
 }
+.lb-save {
+  margin-left: auto;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  border-radius: 8px;
+  padding: 5px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lb-save.saved {
+  background: var(--ok);
+  color: #fff;
+  cursor: default;
+}
+.lb-save:not(.saved):hover { opacity: 0.85; }
