@@ -50,18 +50,20 @@ function Lightbox({ outputs, idx, onClose, onNavigate }) {
   const item = outputs[idx];
   const src = `/api/outputs/${encodeURIComponent(item.file)}`;
   const meta = item;
+  const total = outputs.length;
 
   const [scale, setScale] = useState(1);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [saved, setSaved] = useState(false);
   const dragRef = useRef(null);
+  const wasDragRef = useRef(false);
+  const imgRef = useRef(null);
   const stageRef = useRef(null);
   const touchesRef = useRef([]);
 
-  const canPrev = idx > 0;
-  const canNext = idx < outputs.length - 1;
+  const prevIdx = (idx - 1 + total) % total;
+  const nextIdx = (idx + 1) % total;
 
-  // Reset zoom and save state when navigating to a different image
   useEffect(() => {
     setScale(1);
     setPos({ x: 0, y: 0 });
@@ -73,12 +75,12 @@ function Lightbox({ outputs, idx, onClose, onNavigate }) {
   useEffect(() => {
     const h = (e) => {
       if (e.key === 'Escape') handleClose();
-      if (e.key === 'ArrowLeft' && canPrev) onNavigate(idx - 1);
-      if (e.key === 'ArrowRight' && canNext) onNavigate(idx + 1);
+      if (e.key === 'ArrowLeft') onNavigate(prevIdx);
+      if (e.key === 'ArrowRight') onNavigate(nextIdx);
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [handleClose, onNavigate, idx, canPrev, canNext]);
+  }, [handleClose, onNavigate, prevIdx, nextIdx]);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -97,11 +99,15 @@ function Lightbox({ outputs, idx, onClose, onNavigate }) {
 
   function onPointerDown(e) {
     e.currentTarget.setPointerCapture(e.pointerId);
-    dragRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y, pointerId: e.pointerId };
+    wasDragRef.current = false;
+    dragRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY };
   }
 
   function onPointerMove(e) {
     if (!dragRef.current || dragRef.current.pointerId !== e.pointerId) return;
+    if (Math.hypot(e.clientX - dragRef.current.startX, e.clientY - dragRef.current.startY) > 5) {
+      wasDragRef.current = true;
+    }
     setPos({ x: e.clientX - dragRef.current.x, y: e.clientY - dragRef.current.y });
   }
 
@@ -114,14 +120,16 @@ function Lightbox({ outputs, idx, onClose, onNavigate }) {
 
   function onTouchStart(e) {
     touchesRef.current = Array.from(e.touches);
+    wasDragRef.current = false;
     if (e.touches.length === 1) {
       const [t] = e.touches;
-      dragRef.current = { x: t.clientX - pos.x, y: t.clientY - pos.y, pointerId: -1 };
+      dragRef.current = { x: t.clientX - pos.x, y: t.clientY - pos.y, pointerId: -1, startX: t.clientX, startY: t.clientY };
     }
   }
 
   function onTouchMove(e) {
     const touches = Array.from(e.touches);
+    wasDragRef.current = true;
     if (touches.length === 2) {
       const prev = touchesRef.current;
       if (prev.length === 2) {
@@ -142,6 +150,17 @@ function Lightbox({ outputs, idx, onClose, onNavigate }) {
     if (e.touches.length === 0) dragRef.current = null;
   }
 
+  // Click on stage: close if outside the image; ignore drags and image-area clicks
+  function onStageClick(e) {
+    e.stopPropagation();
+    if (wasDragRef.current) { wasDragRef.current = false; return; }
+    if (imgRef.current) {
+      const r = imgRef.current.getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return;
+    }
+    handleClose();
+  }
+
   async function handleSave(e) {
     e.stopPropagation();
     try {
@@ -158,18 +177,20 @@ function Lightbox({ outputs, idx, onClose, onNavigate }) {
     <div className="lb-backdrop" onClick={handleClose}>
       <button className="lb-close" onClick={(e) => { e.stopPropagation(); handleClose(); }}>✕</button>
 
-      <button
-        className="lb-nav lb-prev"
-        onClick={(e) => { e.stopPropagation(); onNavigate(idx - 1); }}
-        disabled={!canPrev}
-        aria-label="前の画像"
-      >‹</button>
-      <button
-        className="lb-nav lb-next"
-        onClick={(e) => { e.stopPropagation(); onNavigate(idx + 1); }}
-        disabled={!canNext}
-        aria-label="次の画像"
-      >›</button>
+      {total > 1 && (
+        <>
+          <button
+            className="lb-nav lb-prev"
+            onClick={(e) => { e.stopPropagation(); onNavigate(prevIdx); }}
+            aria-label="前の画像"
+          >‹</button>
+          <button
+            className="lb-nav lb-next"
+            onClick={(e) => { e.stopPropagation(); onNavigate(nextIdx); }}
+            aria-label="次の画像"
+          >›</button>
+        </>
+      )}
 
       <div
         ref={stageRef}
@@ -183,10 +204,11 @@ function Lightbox({ outputs, idx, onClose, onNavigate }) {
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        onClick={(e) => e.stopPropagation()}
+        onClick={onStageClick}
         style={{ cursor: scale > 1 ? 'grab' : 'default', touchAction: 'none' }}
       >
         <img
+          ref={imgRef}
           src={src}
           alt=""
           draggable={false}
@@ -201,7 +223,7 @@ function Lightbox({ outputs, idx, onClose, onNavigate }) {
         />
       </div>
 
-      <div className="lb-meta">
+      <div className="lb-meta" onClick={(e) => e.stopPropagation()}>
         <span>{meta.model}</span>
         {loraStr && <span>LoRA: {loraStr}</span>}
         <span>seed {meta.seed}</span>
