@@ -14,9 +14,8 @@ if "%COMFY_CODE%"=="200" (
 ) else (
   if not exist "%COMFYUI_DIR%\.venv\Scripts\python.exe" (
     echo [gen-console] ERROR: ComfyUI not found at %COMFYUI_DIR%
-    echo [gen-console]   python.exe が見つかりません: %COMFYUI_DIR%\.venv\Scripts\python.exe
-    echo [gen-console]   このstart.batは gen-console フォルダ内から実行してください。
-    echo [gen-console]   例: D:\AI\imagegen\app\start.bat
+    echo [gen-console]   Expected: %COMFYUI_DIR%\.venv\Scripts\python.exe
+    echo [gen-console]   Run this bat from inside the gen-console folder.
     exit /b 1
   )
   echo [gen-console] Starting ComfyUI...
