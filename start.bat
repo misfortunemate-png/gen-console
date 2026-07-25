@@ -12,6 +12,13 @@ for /f %%C in ('powershell -NoProfile -Command "try { (Invoke-WebRequest -Uri 'h
 if "%COMFY_CODE%"=="200" (
   echo [gen-console] ComfyUI already running.
 ) else (
+  if not exist "%COMFYUI_DIR%\.venv\Scripts\python.exe" (
+    echo [gen-console] ERROR: ComfyUI not found at %COMFYUI_DIR%
+    echo [gen-console]   python.exe が見つかりません: %COMFYUI_DIR%\.venv\Scripts\python.exe
+    echo [gen-console]   このstart.batは gen-console フォルダ内から実行してください。
+    echo [gen-console]   例: D:\AI\imagegen\app\start.bat
+    exit /b 1
+  )
   echo [gen-console] Starting ComfyUI...
   start "gen-console-comfyui" /min "%COMFYUI_DIR%\.venv\Scripts\python.exe" "%COMFYUI_DIR%\main.py" --listen 127.0.0.1
 
