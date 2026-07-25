@@ -1,3 +1,4 @@
 node_modules/
 ui/dist/
 logs/*.log
+content/outputs/

@@ -526,3 +526,121 @@ input:focus {
   font-size: 11.5px;
   color: var(--err);
 }
+
+/* ---- model/lora section ---- */
+.model-sec .model-name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 8px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lora-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.lora-row select {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.lora-row input[type='range'] {
+  width: 80px;
+  padding: 0;
+  border: none;
+  background: none;
+  accent-color: var(--accent);
+}
+.lora-val {
+  font-size: 11.5px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+}
+
+/* ---- gallery ---- */
+.gal-count {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.tile {
+  cursor: pointer;
+}
+.tile:hover img {
+  opacity: 0.85;
+}
+.tile-model {
+  font-size: 10px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile-loras {
+  font-size: 9.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile-params {
+  font-size: 9.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- lightbox ---- */
+.lb-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lb-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.lb-stage img {
+  display: block;
+  transition: transform 0.05s linear;
+}
+.lb-close {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 501;
+}
+.lb-meta {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  gap: 14px;
+  padding: 8px 20px;
+  font-size: 11.5px;
+  color: var(--muted);
+  z-index: 501;
+  flex-wrap: wrap;
+}

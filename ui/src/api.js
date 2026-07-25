@@ -26,6 +26,9 @@ export const api = {
     req('PUT', `/api/presets/categories/${encodeURIComponent(catId)}/entries/${encodeURIComponent(entryId)}`, body),
   deleteEntry: (catId, entryId) =>
     req('DELETE', `/api/presets/categories/${encodeURIComponent(catId)}/entries/${encodeURIComponent(entryId)}`),
+  getOutputs: ({ limit = 60, offset = 0 } = {}) =>
+    req('GET', `/api/outputs?limit=${limit}&offset=${offset}`),
+  getLoras: () => req('GET', '/api/loras'),
   getProfiles: () => req('GET', '/api/profiles'),
   startRun: (runDef, profileId) => req('POST', '/api/runs', { runDef, profileId }),
   resumeRun: (runId) => req('POST', `/api/runs/${encodeURIComponent(runId)}/resume`),

@@ -147,11 +147,45 @@ function buildTaskPrompt({ runDef, library, axisEntryId, seed }) {
   return { positiveText, negativeText, expansionLog };
 }
 
+// Builds a ComfyUI workflow from anima-lora.json base, injecting 1 or 2 LoRA nodes.
+// loras: [{name: string, strength: number}] (1 or 2 entries)
+// Returns a new workflow object with LoRA values set directly (no __SLOT__ placeholders for LoRAs).
+function buildLoraChainWorkflow(loraTemplate, loras) {
+  const wf = JSON.parse(JSON.stringify(loraTemplate));
+
+  // Fill first LoRA into existing node "4"
+  wf['4'].inputs.lora_name = loras[0].name;
+  wf['4'].inputs.strength_model = loras[0].strength;
+  wf['4'].inputs.strength_clip = loras[0].strength;
+
+  if (loras.length < 2) return wf;
+
+  // Inject second LoRA as node "11", chained from node "4"
+  wf['11'] = {
+    class_type: 'LoraLoader',
+    inputs: {
+      model: ['4', 0],
+      clip: ['4', 1],
+      lora_name: loras[1].name,
+      strength_model: loras[1].strength,
+      strength_clip: loras[1].strength,
+    },
+  };
+
+  // Rewire downstream nodes that referenced node "4" to use "11" instead
+  if (Array.isArray(wf['5']?.inputs?.clip) && wf['5'].inputs.clip[0] === '4') wf['5'].inputs.clip = ['11', 1];
+  if (Array.isArray(wf['6']?.inputs?.clip) && wf['6'].inputs.clip[0] === '4') wf['6'].inputs.clip = ['11', 1];
+  if (Array.isArray(wf['8']?.inputs?.model) && wf['8'].inputs.model[0] === '4') wf['8'].inputs.model = ['11', 0];
+
+  return wf;
+}
+
 module.exports = {
   mulberry32,
   expandText,
   composeTemplate,
   composeNegative,
   buildTaskPrompt,
+  buildLoraChainWorkflow,
   ComposeError,
 };

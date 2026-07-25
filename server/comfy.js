@@ -153,6 +153,18 @@ async function freeMemory() {
   });
 }
 
+async function fetchLoraList() {
+  try {
+    const res = await fetch(`${BASE_URL}/object_info/LoraLoader`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const loraNames = data.LoraLoader?.input?.required?.lora_name?.[0];
+    return Array.isArray(loraNames) ? loraNames : [];
+  } catch {
+    return [];
+  }
+}
+
 module.exports = {
   fillTemplate,
   healthCheck,
@@ -161,5 +173,6 @@ module.exports = {
   fetchOutputImage,
   interruptCurrent,
   freeMemory,
+  fetchLoraList,
   SLOT_TYPES,
 };

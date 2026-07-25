@@ -9,13 +9,53 @@ const queue = require('./queue');
 const PORT = process.env.PORT || 3000;
 const APP_ROOT = path.join(__dirname, '..');
 const CONTENT_ROOT = path.join(APP_ROOT, '..', 'content');
+const OUTPUTS_DIR = path.join(CONTENT_ROOT, 'outputs');
+
+fs.mkdirSync(OUTPUTS_DIR, { recursive: true });
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
+app.get('/healthz', (req, res) => {
+  const { version } = JSON.parse(fs.readFileSync(path.join(APP_ROOT, 'package.json'), 'utf-8'));
+  res.json({ ok: true, version });
+});
+
 app.get('/api/health', async (req, res) => {
   const comfyOk = await comfy.healthCheck();
   res.json({ ok: true, comfy: comfyOk });
+});
+
+app.get('/api/outputs', (req, res) => {
+  const indexPath = path.join(OUTPUTS_DIR, 'index.jsonl');
+  if (!fs.existsSync(indexPath)) return res.json([]);
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+  const lines = fs.readFileSync(indexPath, 'utf-8').trimEnd().split('\n').filter(Boolean);
+  const parsed = [];
+  for (const line of lines) {
+    try { parsed.push(JSON.parse(line)); } catch { /* skip malformed */ }
+  }
+  parsed.reverse();
+  res.json(parsed.slice(offset, offset + limit));
+});
+
+app.get('/api/outputs/:file', (req, res) => {
+  const { file } = req.params;
+  if (!/^[A-Za-z0-9._-]+\.png$/.test(file)) {
+    return res.status(400).json({ error: 'invalid_filename' });
+  }
+  const filePath = path.resolve(OUTPUTS_DIR, file);
+  if (!filePath.startsWith(OUTPUTS_DIR + path.sep)) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not_found' });
+  res.sendFile(filePath);
+});
+
+app.get('/api/loras', async (req, res) => {
+  const list = await comfy.fetchLoraList();
+  res.json(list);
 });
 
 // M0 smoke-test endpoint only. Real run orchestration (queue.js) lands in M1.

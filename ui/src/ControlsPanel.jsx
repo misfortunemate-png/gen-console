@@ -50,9 +50,54 @@ export default function ControlsPanel({
   onStop,
   runActive,
   canStart,
+  selectedProfile,
+  loras,
+  loraSelections,
+  onLoraAdd,
+  onLoraRemove,
+  onLoraChange,
 }) {
+  const checkpointLabel = selectedProfile?.checkpoint
+    ? selectedProfile.checkpoint.replace(/\.[^.]+$/, '')
+    : selectedProfile?.label || '—';
+
   return (
     <aside className="controls">
+      <div className="sec model-sec">
+        <label>モデル・LoRA</label>
+        <div className="model-name">{checkpointLabel}</div>
+        {loraSelections.map((sel, i) => (
+          <div key={i} className="lora-row">
+            <select
+              value={sel.name}
+              onChange={(e) => onLoraChange(i, 'name', e.target.value)}
+            >
+              {loras.map((name) => (
+                <option key={name} value={name}>
+                  {name.replace(/\.[^.]+$/, '')}
+                </option>
+              ))}
+            </select>
+            <input
+              type="range"
+              min={0}
+              max={1.5}
+              step={0.05}
+              value={sel.strength}
+              onChange={(e) => onLoraChange(i, 'strength', parseFloat(e.target.value))}
+            />
+            <span className="lora-val">{Number(sel.strength).toFixed(2)}</span>
+            <button type="button" className="btn-mini danger" onClick={() => onLoraRemove(i)}>×</button>
+          </div>
+        ))}
+        {loraSelections.length < 2 && loras.length > 0 && (
+          <button type="button" className="btn-add" onClick={onLoraAdd}>
+            + LoRA追加
+          </button>
+        )}
+        {loras.length === 0 && <div className="hint">LoRA未導入（なし）</div>}
+      </div>
+
       <div className="sec">
         <label>プロンプト（自由記述）</label>
         <textarea rows={4} value={subject} onChange={(e) => onSubjectChange(e.target.value)} />

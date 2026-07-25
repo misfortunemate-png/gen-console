@@ -51,6 +51,9 @@ export default function App() {
   const [pastRuns, setPastRuns] = useState([]);
   const [selectedRunId, setSelectedRunId] = useState(null);
   const [selectedRunManifest, setSelectedRunManifest] = useState(null);
+  const [loras, setLoras] = useState([]);
+  const [loraSelections, setLoraSelections] = useState([]);
+  const [outputs, setOutputs] = useState([]);
   const [toasts, setToasts] = useState([]);
   const [showPresetModal, setShowPresetModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -83,7 +86,21 @@ export default function App() {
       setPastRuns(runs);
       setSelectedRunId((prev) => prev || runs[0] || null);
     });
+    api.getLoras().then(setLoras).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchOutputs() {
+      try {
+        const data = await api.getOutputs({ limit: 60 });
+        if (!cancelled) setOutputs(data);
+      } catch { /* ignore */ }
+    }
+    fetchOutputs();
+    const interval = setInterval(fetchOutputs, 3000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   useEffect(() => {
@@ -172,6 +189,19 @@ export default function App() {
   const totalImages = axisCatEntry ? axisCatEntry[1].selectedIds.length * genSettings.imagesPerAxisEntry : 0;
   const canStart = !!axisCatEntry && axisCatEntry[1].selectedIds.length > 0;
 
+  function onLoraAdd() {
+    if (loraSelections.length >= 2 || loras.length === 0) return;
+    setLoraSelections((prev) => [...prev, { name: loras[0], strength: 0.8 }]);
+  }
+
+  function onLoraRemove(idx) {
+    setLoraSelections((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function onLoraChange(idx, field, value) {
+    setLoraSelections((prev) => prev.map((sel, i) => (i === idx ? { ...sel, [field]: value } : sel)));
+  }
+
   async function onStart() {
     const runDef = {
       subject,
@@ -180,6 +210,7 @@ export default function App() {
       ),
       exclusion,
       imagesPerAxisEntry: genSettings.imagesPerAxisEntry,
+      loras: loraSelections.filter((l) => l.name),
       params: {
         width: genSettings.width,
         height: genSettings.height,
@@ -286,13 +317,16 @@ export default function App() {
           onStop={onStop}
           runActive={runActive}
           canStart={canStart}
+          selectedProfile={profiles.find((p) => p.id === selectedProfileId) || null}
+          loras={loras}
+          loraSelections={loraSelections}
+          onLoraAdd={onLoraAdd}
+          onLoraRemove={onLoraRemove}
+          onLoraChange={onLoraChange}
         />
         <Stage
           runStatus={runStatus}
-          pastRuns={pastRuns}
-          selectedRunId={selectedRunId}
-          onSelectRun={setSelectedRunId}
-          tiles={tiles}
+          outputs={outputs}
         />
       </div>
 

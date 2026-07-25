@@ -108,11 +108,21 @@ function persistManifest(runState) {
   fs.renameSync(tmp, manifestPath);
 }
 
+function makeModelTag(checkpoint) {
+  return (checkpoint || '').replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 16);
+}
+
+function appendOutputsIndex(outputsDir, entry) {
+  const indexPath = path.join(outputsDir, 'index.jsonl');
+  fs.appendFileSync(indexPath, JSON.stringify(entry) + '\n');
+}
+
 // Writes the final PNG+JSON into content/output (the orderer's space — full
 // prompt text belongs here per spec §9, unlike logs/pipeline.log). Only
 // deletes ComfyUI's own scratch copy after confirming the destination write's
 // byte size matches (PM decision: never delete before verifying the copy).
-function writeOutputFiles({ outputRoot, task, seed, buffer, positiveText, negativeText, expansionLog, profile, runDef, comfyFilename, comfySubfolder }) {
+// Also copies to content/outputs/ (§1 one-stop destination) and appends index.jsonl.
+function writeOutputFiles({ outputRoot, task, seed, buffer, positiveText, negativeText, expansionLog, profile, runDef, loras, comfyFilename, comfySubfolder }) {
   const axisDir = path.join(outputRoot, task.axisId);
   fs.mkdirSync(axisDir, { recursive: true });
   const baseName = `${String(task.seq).padStart(3, '0')}_${seed}`;
@@ -146,6 +156,26 @@ function writeOutputFiles({ outputRoot, task, seed, buffer, positiveText, negati
     seq: task.seq,
   };
   fs.writeFileSync(jsonPath, JSON.stringify(metadata, null, 2));
+
+  // §1: also save to content/outputs/ (one-stop destination)
+  const outputsDir = path.join(CONTENT_ROOT, 'outputs');
+  fs.mkdirSync(outputsDir, { recursive: true });
+  const now = new Date();
+  const p2 = (n) => String(n).padStart(2, '0');
+  const ts = `${now.getFullYear()}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${p2(now.getHours())}${p2(now.getMinutes())}${p2(now.getSeconds())}`;
+  const modelTag = makeModelTag(profile.checkpoint);
+  const outputsFile = `${ts}_${modelTag}_${seed}.png`;
+  fs.writeFileSync(path.join(outputsDir, outputsFile), buffer);
+  appendOutputsIndex(outputsDir, {
+    file: outputsFile,
+    ts: now.toISOString(),
+    model: modelTag,
+    loras: loras || [],
+    seed,
+    steps: runDef.params?.steps,
+    cfg: runDef.params?.cfg,
+    sampler: runDef.params?.sampler,
+  });
 }
 
 async function executeRun(runState) {
@@ -154,7 +184,21 @@ async function executeRun(runState) {
   const profile = loadProfile(runState.profileId);
   const outputRoot = path.join(CONTENT_ROOT, 'output', runId);
   fs.mkdirSync(outputRoot, { recursive: true });
-  const workflowTemplate = JSON.parse(fs.readFileSync(path.join(APP_ROOT, 'workflows', profile.workflow), 'utf-8'));
+
+  const uiLoras = Array.isArray(runDef.loras) ? runDef.loras.filter((l) => l && l.name) : [];
+  let workflowTemplate;
+  if (uiLoras.length > 0) {
+    const loraBase = JSON.parse(fs.readFileSync(path.join(APP_ROOT, 'workflows', 'anima-lora.json'), 'utf-8'));
+    workflowTemplate = compose.buildLoraChainWorkflow(loraBase, uiLoras);
+  } else {
+    workflowTemplate = JSON.parse(fs.readFileSync(path.join(APP_ROOT, 'workflows', profile.workflow), 'utf-8'));
+  }
+  const effectiveLoras =
+    uiLoras.length > 0
+      ? uiLoras.map((l) => ({ name: l.name, strength: l.strength }))
+      : profile.lora
+        ? [{ name: profile.lora, strength: profile.loraStrengthModel ?? 1.0 }]
+        : [];
 
   for (const task of tasks) {
     if (runState.stopRequested) break;
@@ -188,7 +232,7 @@ async function executeRun(runState) {
         __SCHEDULER__: runDef.params.scheduler,
       };
 
-      if (profile.lora) {
+      if (uiLoras.length === 0 && profile.lora) {
         slotValues.__LORA_NAME__ = profile.lora;
         slotValues.__LORA_STRENGTH_MODEL__ = profile.loraStrengthModel ?? 1.0;
         slotValues.__LORA_STRENGTH_CLIP__ = profile.loraStrengthClip ?? 1.0;
@@ -224,6 +268,7 @@ async function executeRun(runState) {
         expansionLog,
         profile,
         runDef,
+        loras: effectiveLoras,
         comfyFilename: filename,
         comfySubfolder: subfolder,
       });
