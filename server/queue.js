@@ -83,31 +83,6 @@ function pickSeed(params, task) {
   return Math.floor(Math.random() * 2 ** 32);
 }
 
-function persistManifest(runState) {
-  const manifestPath = path.join(CONTENT_ROOT, 'output', runState.runId, 'run-manifest.json');
-  fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
-  const manifest = {
-    runId: runState.runId,
-    status: runState.status,
-    startedAt: runState.startedAt,
-    updatedAt: new Date().toISOString(),
-    profileId: runState.profileId,
-    runDef: runState.runDef,
-    tasks: runState.tasks.map((t) => ({
-      taskIndex: t.taskIndex,
-      axisId: t.axisId,
-      seq: t.seq,
-      status: t.status,
-      seed: t.seed,
-      errorType: t.errorType,
-      durationMs: t.durationMs,
-    })),
-  };
-  const tmp = `${manifestPath}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(manifest, null, 2));
-  fs.renameSync(tmp, manifestPath);
-}
-
 function makeModelTag(checkpoint) {
   return (checkpoint || '').replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 16);
 }
@@ -155,8 +130,6 @@ async function executeRun(runState) {
   const { runId, runDef, tasks } = runState;
   const library = presets.getLibrary();
   const profile = loadProfile(runState.profileId);
-  const outputRoot = path.join(CONTENT_ROOT, 'output', runId);
-  fs.mkdirSync(outputRoot, { recursive: true });
 
   const uiLoras = Array.isArray(runDef.loras) ? runDef.loras.filter((l) => l && l.name) : [];
   let workflowTemplate;
@@ -178,7 +151,6 @@ async function executeRun(runState) {
     if (task.status !== 'pending') continue;
 
     task.status = 'running';
-    persistManifest(runState);
     const t0 = Date.now();
 
     try {
@@ -262,15 +234,12 @@ async function executeRun(runState) {
       });
     }
 
-    persistManifest(runState);
-
     if (runDef.pauseSeconds > 0 && !runState.stopRequested) {
       await sleep(runDef.pauseSeconds * 1000);
     }
   }
 
   runState.status = runState.stopRequested ? 'stopped' : 'completed';
-  persistManifest(runState);
   logger.logEvent({
     scope: 'run',
     runId,
@@ -303,7 +272,6 @@ function startRun(runDef, profileId) {
     stopRequested: false,
   };
   currentRun = runState;
-  persistManifest(runState);
 
   executeRun(runState).catch((err) => {
     logger.logEvent({ scope: 'run', runId, status: 'crashed', errorType: err.type || 'unknown' });
@@ -312,54 +280,16 @@ function startRun(runDef, profileId) {
   return { runId, totalTasks: tasks.length };
 }
 
-function resumeRun(runId) {
-  const manifestPath = path.join(CONTENT_ROOT, 'output', runId, 'run-manifest.json');
-  if (!fs.existsSync(manifestPath)) throw new QueueError('run_not_found');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-
-  const tasks = manifest.tasks.map((t) => ({
-    ...t,
-    status: t.status === 'running' ? 'pending' : t.status,
-  }));
-
-  const runState = {
-    runId,
-    profileId: manifest.profileId,
-    runDef: manifest.runDef,
-    status: 'running',
-    startedAt: manifest.startedAt,
-    tasks,
-    completedCount: tasks.filter((t) => t.status === 'completed').length,
-    failedCount: tasks.filter((t) => t.status === 'failed').length,
-    stopRequested: false,
-  };
-  currentRun = runState;
-  persistManifest(runState);
-
-  executeRun(runState).catch((err) => {
-    logger.logEvent({ scope: 'run', runId, status: 'crashed', errorType: err.type || 'unknown' });
-  });
-
-  return { runId, totalTasks: tasks.length };
+function resumeRun() {
+  throw new QueueError('run_not_found');
 }
 
-// Directory listing only (path/filename operations) — never opens/reads
-// prompt content. NFR-8 compliant.
 function listRuns() {
-  const outputRoot = path.join(CONTENT_ROOT, 'output');
-  if (!fs.existsSync(outputRoot)) return [];
-  return fs
-    .readdirSync(outputRoot, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && fs.existsSync(path.join(outputRoot, d.name, 'run-manifest.json')))
-    .map((d) => d.name)
-    .sort()
-    .reverse();
+  return [];
 }
 
-function getRunManifest(runId) {
-  const manifestPath = path.join(CONTENT_ROOT, 'output', runId, 'run-manifest.json');
-  if (!fs.existsSync(manifestPath)) throw new QueueError('run_not_found');
-  return JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+function getRunManifest() {
+  throw new QueueError('run_not_found');
 }
 
 function stopCurrentRun() {

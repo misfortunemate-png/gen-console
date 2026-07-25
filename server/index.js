@@ -15,12 +15,29 @@ const OUTPUTS_DIR = path.join(OUTPUT_ROOT, 'temp');
 fs.mkdirSync(OUTPUTS_DIR, { recursive: true });
 fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
 
-// Clear temp on startup (files only; subdirectories like run manifests are left intact)
+// Clear temp on startup (files only)
 for (const f of fs.readdirSync(OUTPUTS_DIR)) {
   try {
     const p = path.join(OUTPUTS_DIR, f);
     if (fs.statSync(p).isFile()) fs.unlinkSync(p);
   } catch { /* best-effort */ }
+}
+
+// Remove old run-manifest subdirectories from content/output/
+for (const d of fs.readdirSync(OUTPUT_ROOT, { withFileTypes: true })) {
+  if (!d.isDirectory() || d.name === 'temp') continue;
+  try {
+    const manifestPath = path.join(OUTPUT_ROOT, d.name, 'run-manifest.json');
+    if (fs.existsSync(manifestPath)) {
+      fs.rmSync(path.join(OUTPUT_ROOT, d.name), { recursive: true, force: true });
+    }
+  } catch { /* best-effort */ }
+}
+
+// Remove content/runs/ (JSON manifests written by newer run-tracking)
+const RUNS_LEGACY_DIR = path.join(CONTENT_ROOT, 'runs');
+if (fs.existsSync(RUNS_LEGACY_DIR)) {
+  try { fs.rmSync(RUNS_LEGACY_DIR, { recursive: true, force: true }); } catch { /* best-effort */ }
 }
 
 const app = express();
