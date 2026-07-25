@@ -203,6 +203,14 @@ export default function App() {
   }
 
   async function onStart() {
+    if (!axisCatEntry) {
+      pushToast('err', 'カテゴリのモードを「ラン軸」に切り替えてください（モードバッジをクリック）');
+      return;
+    }
+    if (axisCatEntry[1].selectedIds.length === 0) {
+      pushToast('err', 'ラン軸カテゴリのエントリを1件以上選択してください');
+      return;
+    }
     const runDef = {
       subject,
       categorySelections: Object.fromEntries(

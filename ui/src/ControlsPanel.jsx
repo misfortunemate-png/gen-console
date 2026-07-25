@@ -106,6 +106,18 @@ export default function ControlsPanel({
         </div>
       </div>
 
+      <div className="sec">
+        <div className="cathead">
+          <label style={{ margin: 0, display: 'inline' }}>カテゴリ</label>
+          <button type="button" className="editlink" onClick={onEditCategory}>
+            プリセット編集
+          </button>
+        </div>
+        {library.categories.length === 0 && (
+          <div className="hint">カテゴリ未登録。「プリセット編集」から追加してください</div>
+        )}
+      </div>
+
       {library.categories.map((cat) => (
         <CategorySection
           key={cat.id}
@@ -153,7 +165,7 @@ export default function ControlsPanel({
         </div>
       </div>
       <div className="runbtns">
-        <button className="btn-go" disabled={!canStart || runActive} onClick={onStart}>
+        <button className="btn-go" disabled={runActive} onClick={onStart}>
           生成開始（計 {totalImages} 枚）
         </button>
         <button className="btn-stop" disabled={!runActive} onClick={onStop}>
